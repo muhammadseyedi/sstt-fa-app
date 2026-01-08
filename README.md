@@ -196,6 +196,7 @@ where ffmpeg
 یا PATH درست نیست
 
 یا از روش FFMPEG_BIN (بخش ffmpeg) استفاده کنید
-'@ | Set-Content -Encoding UTF8 .\README.md
+
+
 
 
