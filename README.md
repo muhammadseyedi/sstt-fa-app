@@ -1,43 +1,36 @@
-# تبدیل ویس فارسی به متن (STT) — FastAPI + faster-whisper
+تبدیل ویس فارسی به متن (STT) — FastAPI + faster-whisper
 
-این پروژه یک وب‌اپ ساده برای تبدیل **صوت فارسی به متن** است:
-- ضبط صدا داخل مرورگر یا آپلود فایل صوتی
-- تبدیل فرمت با **ffmpeg** به WAV استاندارد (16kHz mono)
-- تبدیل صوت به متن با **faster-whisper (Whisper)**
+این پروژه یک وب‌اپ ساده برای تبدیل صوت فارسی به متن است:
 
----
+ضبط صدا داخل مرورگر یا آپلود فایل صوتی
 
-## پیش‌نیازها
+تبدیل فرمت با ffmpeg به WAV استاندارد (16kHz mono)
 
-- Python 3.11+ (۳.۱۲ هم عالیه؛ ۳.۱۳ هم معمولاً اوکیه)
-- ffmpeg (ضروری)
-- اینترنت برای دانلود اولیه مدل (فقط بار اول)
+تبدیل صوت به متن با faster-whisper (Whisper)
 
----
+پیش‌نیازها
 
-## ساختار پروژه
+Python 3.11+
 
+ffmpeg (ضروری)
+
+اینترنت برای دانلود اولیه مدل (فقط بار اول)
+
+ساختار پروژه
 stt-fa-app/
-backend/
-main.py
-requirements.txt
-static/
-index.html
-.venv/ (بعد از ساخت venv)
+  backend/
+    main.py
+    requirements.txt
+  static/
+    index.html
+  .venv/            (بعد از ساخت venv)
 
-yaml
-Copy code
+نصب و راه‌اندازی
+ویندوز (PowerShell)
 
----
+از داخل فولدر backend اجرا کنید.
 
-## نصب و راه‌اندازی
-
-### ویندوز (PowerShell)
-
-> از داخل فولدر `backend` اجرا کنید.
-
-```powershell
-cd D:\Project\stt-fa-app\backend
+cd .\backend
 
 python -m venv ..\.venv
 & ..\.venv\Scripts\Activate.ps1
@@ -48,10 +41,9 @@ python -m pip install -U pip setuptools wheel
 python -m pip install --only-binary=:all: "ctranslate2>=4.6.3"
 
 python -m pip install -r requirements.txt
+
 لینوکس / مک
-bash
-Copy code
-cd /path/to/stt-fa-app/backend
+cd ./backend
 
 python3 -m venv ../.venv
 source ../.venv/bin/activate
@@ -62,27 +54,30 @@ python -m pip install -U pip setuptools wheel
 python -m pip install --only-binary=:all: "ctranslate2>=4.6.3"
 
 python -m pip install -r requirements.txt
+
 ffmpeg (خیلی مهم)
+
 اگر ffmpeg در دسترس نباشد معمولاً این خطا را می‌بینید:
+
 تبدیل ffmpeg شکست خورد: [WinError 2] The system cannot find the file specified
 
-تست نصب بودن
+تست نصب بودن ffmpeg
+
 ویندوز:
 
-powershell
-Copy code
 where ffmpeg
 ffmpeg -version
+
+
 لینوکس/مک:
 
-bash
-Copy code
 which ffmpeg
 ffmpeg -version
+
 نصب سریع روی ویندوز با winget
-powershell
-Copy code
 winget install --id Gyan.FFmpeg
+
+
 بعد از نصب:
 
 همه ترمینال‌ها را ببندید
@@ -91,45 +86,47 @@ winget install --id Gyan.FFmpeg
 
 دوباره تست بزنید:
 
-powershell
-Copy code
 where ffmpeg
 ffmpeg -version
+
 اگر ffmpeg داخل ترمینال پروژه شناخته نشد (راه قطعی)
+
 گاهی ffmpeg نصب هست ولی داخل یک ترمینال خاص شناخته نمی‌شود. در این حالت می‌شود مسیر ffmpeg.exe را مستقیم با متغیر محیطی به برنامه داد.
 
 مسیر دقیق ffmpeg را پیدا کنید:
 
-powershell
-Copy code
 where ffmpeg
+
+
 همان مسیر را ست کنید (مثال):
 
-powershell
-Copy code
 $env:FFMPEG_BIN="C:\path\to\ffmpeg.exe"
 & "$env:FFMPEG_BIN" -version
+
+
 روش خودکار (بدون کپی‌کاری):
 
-powershell
-Copy code
 $ff = (where.exe ffmpeg | Select-Object -First 1)
 $env:FFMPEG_BIN = $ff
 & "$env:FFMPEG_BIN" -version
+
+
 نکته: $env:FFMPEG_BIN=... فقط برای همان پنجره PowerShell است.
 
 اجرای برنامه
+
 داخل backend و در حالی که venv فعال است:
 
-powershell
-Copy code
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
+
+
 بعد در مرورگر:
 
 http://localhost:8000/
 
 API
 POST /api/transcribe
+
 ورودی: فایل صوتی (multipart/form-data)
 خروجی: JSON شامل متن
 
@@ -141,20 +138,20 @@ timestamps (پیش‌فرض false) اگر true باشد، segmentها با زم�
 
 مثال با curl:
 
-powershell
-Copy code
 curl -F "file=@sample.wav" "http://localhost:8000/api/transcribe?language=fa&timestamps=false"
+
 افزایش دقت (پیشنهاد)
+
 دقت خیلی به اندازه مدل بستگی دارد. برای کیفیت بهتر، مدل را بزرگ‌تر کنید.
 
 قبل از اجرای سرور می‌توانید این env ها را ست کنید:
 
-powershell
-Copy code
 $env:WHISPER_MODEL="large-v3"   # یا medium / small
 $env:WHISPER_DEVICE="cpu"       # اگر GPU دارید: cuda
 $env:WHISPER_COMPUTE="int8"     # برای cpu معمولاً int8
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
+
+
 پیشنهاد کلی:
 
 بهترین کیفیت: large-v3 (کندتر/سنگین‌تر)
@@ -165,36 +162,33 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 نکته‌های رایج
 uvicorn شناخته نمی‌شود
+
 روی ویندوز به جای uvicorn ... همیشه این را بزنید:
 
-powershell
-Copy code
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
+
 هشدار symlink از huggingface_hub
+
 این خطا نیست؛ فقط یعنی کش مدل‌ها روی ویندوز ممکن است فضای بیشتری مصرف کند. اگر نمی‌خواهید نمایش داده شود:
 
-powershell
-Copy code
 $env:HF_HUB_DISABLE_SYMLINKS_WARNING="1"
+
+
 اگر فضای درایو C کم است، کش را روی D ببرید:
 
-powershell
-Copy code
 $env:HF_HOME="D:\hf_cache"
 $env:HUGGINGFACE_HUB_CACHE="D:\hf_cache\hub"
+
 Troubleshooting سریع
 خطای WinError 2 برای ffmpeg
-داخل همان ترمینالی که سرور را اجرا می‌کنید بزنید:
 
-powershell
-Copy code
+داخل همان ترمینالی که سرور را اجرا می‌کنید:
+
 where ffmpeg
+
+
 اگر خروجی خالی بود:
 
 یا PATH درست نیست
 
-یا از روش FFMPEG_BIN (بالا) استفاده کنید
-
-makefile
-Copy code
-::contentReference[oaicite:0]{index=0}
+یا از روش FFMPEG_BIN (بخش ffmpeg) استفاده کنید
