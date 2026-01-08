@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>تبدیل ویس فارسی به متن</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 12px; }
+    button { padding: 10px 14px; margin: 6px 6px 6px 0; }
+    pre { white-space: pre-wrap; background: #f6f6f6; padding: 12px; border-radius: 10px; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 12px; margin-top: 12px; }
+    small { color: #666; }
+  </style>
+</head>
+<body>
+  <h2>تبدیل ویس فارسی به متن</h2>
+  <div class="card">
+    <div class="row">
+      <button id="start">شروع ضبط</button>
+      <button id="stop" disabled>پایان ضبط</button>
+      <label><input id="timestamps" type="checkbox"> تایم‌استمپ‌ها</label>
+    </div>
+    <small>ضبط با مرورگر انجام می‌شود؛ سپس فایل برای تبدیل به سرور ارسال می‌شود.</small>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="file" type="file" accept="audio/*,video/webm" />
+      <button id="upload">آپلود و تبدیل</button>
+    </div>
+    <small>می‌توانی فایل mp3/wav/m4a/webm/... بدهی.</small>
+  </div>
+
+  <h3>خروجی</h3>
+  <pre id="out">...</pre>
+
+<script>
+const out = document.getElementById("out");
+const btnStart = document.getElementById("start");
+const btnStop = document.getElementById("stop");
+const btnUpload = document.getElementById("upload");
+const fileInput = document.getElementById("file");
+const ts = document.getElementById("timestamps");
+
+let rec, chunks = [];
+
+function pickMimeType() {
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+    "audio/mp4"
+  ];
+  for (const t of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return ""; // مرورگر خودش انتخاب می‌کند
+}
+
+async function sendBlob(blob, filename) {
+  out.textContent = "در حال ارسال و تبدیل...";
+  const fd = new FormData();
+  fd.append("file", blob, filename);
+
+  const url = `/api/transcribe?language=fa&timestamps=${ts.checked ? "true" : "false"}`;
+  const r = await fetch(url, { method: "POST", body: fd });
+  const j = await r.json();
+  if (!r.ok) {
+    out.textContent = "خطا:\n" + (j.detail ? JSON.stringify(j.detail, null, 2) : JSON.stringify(j, null, 2));
+    return;
+  }
+  out.textContent = j.text || JSON.stringify(j, null, 2);
+
+  if (ts.checked && j.segments) {
+    out.textContent += "\n\n--- segments ---\n" + JSON.stringify(j.segments, null, 2);
+  }
+}
+
+btnStart.onclick = async () => {
+  chunks = [];
+  out.textContent = "در حال ضبط...";
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  const mimeType = pickMimeType();
+  rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+  rec.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+  rec.onstop = async () => {
+    const type = rec.mimeType || "audio/webm";
+    const blob = new Blob(chunks, { type });
+    await sendBlob(blob, "voice.webm");
+    stream.getTracks().forEach(t => t.stop());
+  };
+
+  rec.start();
+  btnStart.disabled = true;
+  btnStop.disabled = false;
+};
+
+btnStop.onclick = () => {
+  if (rec && rec.state !== "inactive") rec.stop();
+  btnStart.disabled = false;
+  btnStop.disabled = true;
+};
+
+btnUpload.onclick = async () => {
+  const f = fileInput.files?.[0];
+  if (!f) {
+    out.textContent = "اول یک فایل انتخاب کن.";
+    return;
+  }
+  await sendBlob(f, f.name);
+};
+</script>
+</body>
+</html>
