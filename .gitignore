@@ -11,6 +11,7 @@ env/
 # Environment / local settings
 .env
 .env.*
+!.env.example
 
 # Model and runtime artifacts
 *.model
