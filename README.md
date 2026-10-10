@@ -1,202 +1,145 @@
+# تبدیل گفتار فارسی به متن (Speech-to-Text)
 
-# تبدیل ویس فارسی به متن (STT) — FastAPI + faster-whisper
+یک وب‌اپلیکیشن سبک با **FastAPI** و **faster-whisper** برای تبدیل فایل‌های صوتی به متن فارسی. کاربر می‌تواند در مرورگر صدا ضبط کند یا فایل صوتی موجود را آپلود کند.
 
-این پروژه یک وب‌اپ ساده برای تبدیل **صوت فارسی به متن** است:
-- ضبط صدا داخل مرورگر یا آپلود فایل صوتی
-- تبدیل فرمت با **ffmpeg** به WAV استاندارد (16kHz mono)
-- تبدیل صوت به متن با **faster-whisper (Whisper)**
+## قابلیت‌ها
 
----
+- ضبط صدا در مرورگر و بارگذاری فایل صوتی.
+- تبدیل ورودی صوتی به WAV تک‌کاناله با نرخ نمونه‌برداری 16 kHz با استفاده از FFmpeg.
+- تبدیل گفتار به متن توسط faster-whisper.
+- امکان دریافت متن همراه با زمان شروع و پایان segmentها.
+- تنظیم مدل، device و نوع محاسبه از طریق متغیرهای محیطی.
+
+> **وضعیت پروژه:** این مخزن کد برنامه را ارائه می‌کند، اما در حال حاضر بنچمارک دقت فارسی (مانند WER/CER)، نمونه‌ی صوتی مرجع و دمو میزبانی‌شده ارائه نشده‌اند. بنابراین کیفیت مدل روی داده‌های مشخص فارسی در این مخزن به‌صورت کمی ارزیابی نشده است.
 
 ## پیش‌نیازها
 
-- Python 3.11+
-- ffmpeg (ضروری)
-- اینترنت برای دانلود اولیه مدل (فقط بار اول)
-
----
+- Python 3.11 یا جدیدتر.
+- FFmpeg قابل اجرا از طریق `PATH` یا مسیر مشخص‌شده با `FFMPEG_BIN`.
+- اتصال اینترنت برای دانلود اولیه‌ی مدل.
+- فضای ذخیره‌سازی کافی برای مدل انتخابی.
 
 ## ساختار پروژه
 
-stt-fa-app/
-backend/
-main.py
-requirements.txt
-static/
-index.html
-.venv/ (بعد از ساخت venv)
+```text
+sstt-fa-app/
+├── backend/
+│   ├── main.py
+│   └── requirements.txt
+├── static/
+│   └── index.html
+├── .gitignore
+└── README.md
+```
 
-yaml
-Copy code
+## نصب و اجرا
 
----
+### Windows PowerShell
 
-## نصب و راه‌اندازی
-
-### ویندوز (PowerShell)
-
-> از داخل فولدر `backend` اجرا کنید.
+از ریشه‌ی مخزن اجرا کنید:
 
 ```powershell
-cd .\backend
+python -m venv .venv
+& .\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip setuptools wheel
 
-python -m venv ..\.venv
-& ..\.venv\Scripts\Activate.ps1
+# نصب پیش‌نیازهای Python
+python -m pip install -r .\backend\requirements.txt
 
-python -m pip install -U pip setuptools wheel
+# اجرای سرور
+Set-Location .\backend
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
 
-# پیشنهاد می‌کنم این رو جدا نصب کنید تا pip سراغ build از سورس نره
-python -m pip install --only-binary=:all: "ctranslate2>=4.6.3"
+### Linux / macOS
 
-python -m pip install -r requirements.txt
-لینوکس / مک
-bash
-Copy code
-cd ./backend
+از ریشه‌ی مخزن اجرا کنید:
 
-python3 -m venv ../.venv
-source ../.venv/bin/activate
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r backend/requirements.txt
 
-python -m pip install -U pip setuptools wheel
+cd backend
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
 
-# پیشنهاد می‌کنم این رو جدا نصب کنید تا pip سراغ build از سورس نره
-python -m pip install --only-binary=:all: "ctranslate2>=4.6.3"
+سپس در مرورگر آدرس [http://127.0.0.1:8000/](http://127.0.0.1:8000/) را باز کنید.
 
-python -m pip install -r requirements.txt
-ffmpeg (خیلی مهم)
-اگر ffmpeg در دسترس نباشد معمولاً این خطا را می‌بینید:
+## نصب FFmpeg
 
-تبدیل ffmpeg شکست خورد: [WinError 2] The system cannot find the file specified
+FFmpeg باید در همان محیطی که سرور را اجرا می‌کنید قابل دسترسی باشد.
 
-تست نصب بودن ffmpeg
-ویندوز:
+در Windows می‌توانید پس از نصب، بررسی کنید:
 
-powershell
-Copy code
-where ffmpeg
+```powershell
+where.exe ffmpeg
 ffmpeg -version
-لینوکس/مک:
+```
 
-bash
-Copy code
+در Linux/macOS:
+
+```bash
 which ffmpeg
 ffmpeg -version
-نصب سریع روی ویندوز با winget
-powershell
-Copy code
-winget install --id Gyan.FFmpeg
-بعد از نصب:
+```
 
-همه ترمینال‌ها را ببندید
+اگر FFmpeg در `PATH` نیست، مسیر فایل اجرایی را با متغیر `FFMPEG_BIN` مشخص کنید. در PowerShell:
 
-یک PowerShell جدید باز کنید
-
-دوباره تست بزنید:
-
-powershell
-Copy code
-where ffmpeg
-ffmpeg -version
-اگر ffmpeg داخل ترمینال پروژه شناخته نشد (راه قطعی)
-گاهی ffmpeg نصب هست ولی داخل یک ترمینال خاص شناخته نمی‌شود. در این حالت می‌شود مسیر ffmpeg.exe را مستقیم با متغیر محیطی به برنامه داد.
-
-مسیر دقیق ffmpeg را پیدا کنید:
-
-powershell
-Copy code
-where ffmpeg
-همان مسیر را ست کنید (مثال):
-
-powershell
-Copy code
+```powershell
 $env:FFMPEG_BIN="C:\path\to\ffmpeg.exe"
-& "$env:FFMPEG_BIN" -version
-روش خودکار (بدون کپی‌کاری):
+```
 
-powershell
-Copy code
-$ff = (where.exe ffmpeg | Select-Object -First 1)
-$env:FFMPEG_BIN = $ff
-& "$env:FFMPEG_BIN" -version
-نکته: $env:FFMPEG_BIN=... فقط برای همان پنجره PowerShell است.
+این متغیر فقط برای همان نشست PowerShell فعال می‌ماند، مگر آن‌که به‌شکل دائمی در سیستم تنظیم شود.
 
-اجرای برنامه
-داخل backend و در حالی که venv فعال است:
+## تنظیمات مدل
 
-powershell
-Copy code
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
-بعد در مرورگر:
+تنظیمات زیر پیش از شروع سرور خوانده می‌شوند:
 
-http://localhost:8000/
+| متغیر | مقدار پیش‌فرض | توضیح |
+|---|---|---|
+| `WHISPER_MODEL` | `small` | مدل faster-whisper |
+| `WHISPER_DEVICE` | `cpu` | دستگاه اجرا، معمولاً `cpu` یا `cuda` |
+| `WHISPER_COMPUTE` | `int8` | نوع محاسبه؛ `int8` معمولاً برای CPU مناسب است |
+| `FFMPEG_BIN` | `ffmpeg` | مسیر FFmpeg یا نام قابل اجرا از `PATH` |
 
-API
-POST /api/transcribe
-ورودی: فایل صوتی (multipart/form-data)
-خروجی: JSON شامل متن
+برای نمونه در PowerShell:
 
-پارامترها:
+```powershell
+$env:WHISPER_MODEL="medium"
+$env:WHISPER_DEVICE="cpu"
+$env:WHISPER_COMPUTE="int8"
+```
 
-language (پیش‌فرض fa)
+مدل‌های بزرگ‌تر می‌توانند حافظه و زمان بیشتری مصرف کنند؛ انتخاب مناسب به سخت‌افزار و نیاز دقت/سرعت بستگی دارد. سازگاری CUDA به نصب نسخه‌های سازگار از درایور و وابستگی‌های لازم نیز وابسته است.
 
-timestamps (پیش‌فرض false) اگر true باشد، segmentها با زمان شروع/پایان هم برمی‌گردد.
+## API
 
-مثال با curl:
+### `POST /api/transcribe`
 
-powershell
-Copy code
-curl -F "file=@sample.wav" "http://localhost:8000/api/transcribe?language=fa&timestamps=false"
-افزایش دقت (پیشنهاد)
-دقت خیلی به اندازه مدل بستگی دارد. برای کیفیت بهتر، مدل را بزرگ‌تر کنید.
+فایل را با `multipart/form-data` و نام فیلد `file` ارسال کنید.
 
-قبل از اجرای سرور می‌توانید این env ها را ست کنید:
+پارامترهای query:
 
-powershell
-Copy code
-$env:WHISPER_MODEL="large-v3"   # یا medium / small
-$env:WHISPER_DEVICE="cpu"       # اگر GPU دارید: cuda
-$env:WHISPER_COMPUTE="int8"     # برای cpu معمولاً int8
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
-پیشنهاد کلی:
+- `language`: کد زبان؛ پیش‌فرض `fa`.
+- `timestamps`: اگر `true` باشد، segmentهای زمان‌بندی‌شده نیز برگردانده می‌شوند؛ پیش‌فرض `false`.
 
-بهترین کیفیت: large-v3 (کندتر/سنگین‌تر)
+نمونه:
 
-تعادل سرعت/کیفیت: medium
+```bash
+curl -X POST \
+  -F "file=@sample.wav" \
+  "http://127.0.0.1:8000/api/transcribe?language=fa&timestamps=true"
+```
 
-سریع‌تر ولی دقت کمتر: small
+پاسخ شامل زبان تشخیص‌داده‌شده، مدت زمان صوت و متن است. در صورت فعال‌بودن `timestamps`، آرایه‌ی `segments` نیز شامل زمان شروع، پایان و متن هر قطعه خواهد بود.
 
-نکته‌های رایج
-uvicorn شناخته نمی‌شود
-روی ویندوز به جای uvicorn ... همیشه این را بزنید:
+فایل خالی با خطای `400` و فایل بزرگ‌تر از 25 MiB با خطای `413` رد می‌شود. خطاهای تبدیل یا تشخیص گفتار نیز در پاسخ API گزارش می‌شوند.
 
-powershell
-Copy code
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
-هشدار symlink از huggingface_hub
-این خطا نیست؛ فقط یعنی کش مدل‌ها روی ویندوز ممکن است فضای بیشتری مصرف کند. اگر نمی‌خواهید نمایش داده شود:
+## محدودیت‌ها و کارهای بعدی
 
-powershell
-Copy code
-$env:HF_HUB_DISABLE_SYMLINKS_WARNING="1"
-اگر فضای درایو C کم است، کش را روی D ببرید:
-
-powershell
-Copy code
-$env:HF_HOME="D:\hf_cache"
-$env:HUGGINGFACE_HUB_CACHE="D:\hf_cache\hub"
-Troubleshooting سریع
-خطای WinError 2 برای ffmpeg
-داخل همان ترمینالی که سرور را اجرا می‌کنید:
-
-powershell
-Copy code
-where ffmpeg
-اگر خروجی خالی بود:
-
-یا PATH درست نیست
-
-یا از روش FFMPEG_BIN (بخش ffmpeg) استفاده کنید
-
-
-
-
+- کیفیت تشخیص گفتار هنوز با WER/CER روی مجموعه‌ای از فایل‌های فارسی سنجیده نشده است.
+- زمان پاسخ و مصرف حافظه برای اندازه‌های مختلف مدل ثبت نشده‌اند.
+- پیش از استقرار عمومی، احراز هویت، محدودسازی نرخ درخواست، محدودیت مدت صوت، مدیریت صف و نظارت بر خطاها را اضافه کنید.
+- سرویس فعلی برای اجرا به‌شکل محلی مستند شده است؛ دسترسی شبکه‌ای گسترده را فقط در صورت نیاز و پس از اعمال ملاحظات امنیتی فعال کنید.
