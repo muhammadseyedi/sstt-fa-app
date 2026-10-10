@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / local settings
+.env
+.env.*
+
+# Model and runtime artifacts
+*.model
+*.bin
+*.pt
+*.pth
+*.onnx
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.ogg
